@@ -9,6 +9,7 @@ export function BeforeAfterSlider({ before, after }: Props) {
   const [sliderPos, setSliderPos] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const frameRef = useRef<number>(0);
 
   const updatePos = useCallback((clientX: number) => {
     if (!containerRef.current) return;
@@ -17,15 +18,15 @@ export function BeforeAfterSlider({ before, after }: Props) {
     const x = clientX - rect.left;
     const position = (x / rect.width) * 100;
 
-    // Suavização via frame de animação do navegador
-    requestAnimationFrame(() => {
+    cancelAnimationFrame(frameRef.current);
+    frameRef.current = requestAnimationFrame(() => {
       setSliderPos(Math.min(Math.max(position, 0), 100));
     });
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
-    (e.target as Element).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
     updatePos(e.clientX);
   };
 
@@ -49,6 +50,7 @@ export function BeforeAfterSlider({ before, after }: Props) {
         src={after}
         className="absolute inset-0 w-full h-full object-contain pointer-events-none"
         alt="Depois"
+        draggable={false}
       />
 
       <div
@@ -59,6 +61,7 @@ export function BeforeAfterSlider({ before, after }: Props) {
           src={before}
           className="absolute inset-0 w-full h-full object-contain bg-[#0a0a0a]"
           alt="Antes"
+          draggable={false}
         />
       </div>
 

@@ -18,7 +18,7 @@ export function ResultsActions({ onDownload, onReset }: ResultsActionsProps) {
         onClick={onReset}
         className="px-8 flex items-center justify-center gap-2 bg-gray-800 text-gray-400 py-5 rounded-2xl font-bold hover:bg-gray-700 hover:text-white transition-all cursor-pointer"
       >
-        <RefreshCw size={20} /> NOVO
+        <RefreshCw size={20} />
       </button>
     </div>
   );

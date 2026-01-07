@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useImageCompressor } from "./hooks/useImageCompressor";
+import { formatSize, calculateEconomy } from "./utils/imageUtils";
 import { UploadArea } from "./components/UploadArea";
 import { BeforeAfterSlider } from "./components/BeforeAfterSlider";
 import { Header } from "./components/layout/Header";
@@ -22,10 +23,7 @@ export default function App() {
 
   const economy = useMemo(() => {
     if (!originalImage || !compressedImage) return 0;
-    const raw = Math.round(
-      ((originalImage.size - compressedImage.size) / originalImage.size) * 100
-    );
-    return Math.max(0, raw);
+    return calculateEconomy(originalImage.size, compressedImage.size);
   }, [originalImage, compressedImage]);
 
   return (
@@ -33,7 +31,7 @@ export default function App() {
       <Header />
 
       <main className="max-w-4xl mx-auto space-y-10">
-        {!originalImage && <UploadArea onFileSelect={compress} />}
+        {!originalImage && !loading && <UploadArea onFileSelect={compress} />}
 
         {loading && <LoadingState progress={progress} />}
 
@@ -52,11 +50,11 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
                 label="Original"
-                value={`${(originalImage.size / 1024 / 1024).toFixed(2)} MB`}
+                value={formatSize(originalImage.size)}
               />
               <StatCard
                 label="Otimizada"
-                value={`${(compressedImage.size / 1024 / 1024).toFixed(2)} MB`}
+                value={formatSize(compressedImage.size)}
                 variant="pink"
               />
               <StatCard

@@ -1,5 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import imageCompression from "browser-image-compression";
+import {
+  validateImage,
+  sanitizeFileName,
+  getCompressionOptions,
+} from "../utils/imageUtils";
 
 export function useImageCompressor() {
   const [loading, setLoading] = useState(false);
@@ -8,50 +13,33 @@ export function useImageCompressor() {
   const [compressedImage, setCompressedImage] = useState<File | null>(null);
   const [previews, setPreviews] = useState({ before: "", after: "" });
 
-  const lastProgressUpdate = useRef<number>(0);
+  const lastProgressValue = useRef<number>(0);
 
-  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
-  // Limpeza de memória: Revoga URLs de Blob para evitar vazamento (Memory Leak)
-  useEffect(() => {
-    return () => {
-      if (previews.before) URL.revokeObjectURL(previews.before);
-      if (previews.after) URL.revokeObjectURL(previews.after);
-    };
+  const revokeUrls = useCallback(() => {
+    if (previews.before) URL.revokeObjectURL(previews.before);
+    if (previews.after) URL.revokeObjectURL(previews.after);
   }, [previews]);
 
   const compress = async (file: File) => {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      alert("Formato inválido. Use JPG, PNG, WebP ou GIF.");
-      return;
-    }
+    const error = validateImage(file);
+    if (error) return alert(error);
 
-    if (file.size > 15 * 1024 * 1024) {
-      alert("Arquivo muito grande (máximo 15MB).");
-      return;
-    }
-
+    revokeUrls();
     setOriginalImage(file);
     setCompressedImage(null);
+    setPreviews({ before: "", after: "" });
     setLoading(true);
     setProgress(0);
-    lastProgressUpdate.current = 0;
+    lastProgressValue.current = 0;
 
-    const options = {
-      maxSizeMB: 0.8,
-      maxWidthOrHeight: 1980,
-      useWebWorker: true,
-      fileType: file.type,
-      initialQuality: 0.75,
-      preserveExif: true,
-      onProgress: (p: number) => {
-        const now = Date.now();
-        if (now - lastProgressUpdate.current > 100 || p === 100) {
-          setProgress(Math.round(p));
-          lastProgressUpdate.current = now;
-        }
-      },
-    };
+    const options = getCompressionOptions(file, (p) => {
+      const currentP = Math.round(p);
+      // SÓ atualiza o estado se mudar 5% ou chegar em 100%
+      if (currentP - lastProgressValue.current >= 5 || currentP === 100) {
+        setProgress(currentP);
+        lastProgressValue.current = currentP;
+      }
+    });
 
     try {
       const compressedBlob = await imageCompression(file, options);
@@ -59,26 +47,22 @@ export function useImageCompressor() {
       // Inteligência de tamanho
       const finalBlob = compressedBlob.size > file.size ? file : compressedBlob;
 
-      // Sanitização de nome
-      const sanitizedName = file.name
-        .replace(/[^a-z0-9.]/gi, "_")
-        .replace(/_{2,}/g, "_");
+      const compressedFile = new File(
+        [finalBlob],
+        sanitizeFileName(file.name),
+        { type: file.type, lastModified: Date.now() }
+      );
 
-      const compressedFile = new File([finalBlob], sanitizedName, {
-        type: file.type,
-        lastModified: Date.now(),
-      });
-
-      // Cria URLs únicas para os previews
       const beforeUrl = URL.createObjectURL(file);
       const afterUrl = URL.createObjectURL(compressedFile);
 
       setPreviews({ before: beforeUrl, after: afterUrl });
       setCompressedImage(compressedFile);
-    } catch (error) {
-      console.error("Erro na compressão:", error);
-      alert("Erro ao processar imagem.");
-    } finally {
+
+      // Delay para garantir que o browser montou as imagens antes de tirar o loader
+      setTimeout(() => setLoading(false), 400);
+    } catch (err) {
+      console.error("Erro na compressão:", err);
       setLoading(false);
     }
   };
@@ -89,18 +73,17 @@ export function useImageCompressor() {
     const link = document.createElement("a");
     link.href = previews.after;
     link.download = `optimized_${compressedImage.name}`;
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
   }, [compressedImage, previews.after]);
 
   const reset = useCallback(() => {
+    revokeUrls();
     setOriginalImage(null);
     setCompressedImage(null);
     setPreviews({ before: "", after: "" });
     setLoading(false);
     setProgress(0);
-  }, []);
+  }, [revokeUrls]);
 
   return {
     loading,

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload } from "lucide-react";
+import { ALLOWED_TYPES } from "../utils/imageUtils";
 
 interface Props {
   onFileSelect: (file: File) => void;
@@ -17,13 +18,19 @@ export function UploadArea({ onFileSelect }: Props) {
   const handleDrop = (e: React.DragEvent) => {
     handleDrag(e);
     setIsDragging(false);
-    if (e.dataTransfer.files?.[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith("image/")) {
-        onFileSelect(file);
-      } else {
-        alert("Apenas imaens são permitidas.");
-      }
+    const file = e.dataTransfer.files?.[0];
+    if (file && ALLOWED_TYPES.includes(file.type)) {
+      onFileSelect(file);
+    } else if (file) {
+      alert("Formato não suportado.");
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onFileSelect(file);
+      e.target.value = "";
     }
   };
 
@@ -73,10 +80,8 @@ export function UploadArea({ onFileSelect }: Props) {
           ref={fileInputRef}
           type="file"
           className="hidden"
-          accept="image/jpeg, image/png, image/webp"
-          onChange={(e) =>
-            e.target.files?.[0] && onFileSelect(e.target.files[0])
-          }
+          accept={ALLOWED_TYPES.join(",")}
+          onChange={handleChange}
         />
       </label>
     </div>

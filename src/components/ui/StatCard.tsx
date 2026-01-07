@@ -4,26 +4,21 @@ interface StatCardProps {
   variant?: "gray" | "pink" | "highlight";
 }
 
+const variants = {
+  gray: { container: "bg-gray-900 border-gray-800", label: "text-gray-500" },
+  pink: { container: "bg-gray-900 border-gray-800", label: "text-pink-500" },
+  highlight: {
+    container: "bg-pink-600 border-transparent text-white",
+    label: "text-white/80",
+  },
+};
+
 export function StatCard({ label, value, variant = "gray" }: StatCardProps) {
-  // Lógica de estilos baseada na variante
-  const containerStyles = {
-    gray: "bg-gray-900 border-gray-800",
-    pink: "bg-gray-900 border-gray-800",
-    highlight: "bg-pink-600 border-transparent",
-  };
-
-  const labelStyles = {
-    gray: "text-gray-500",
-    pink: "text-pink-500",
-    highlight: "text-white/80",
-  };
-
+  const style = variants[variant];
   return (
-    <div
-      className={`p-6 rounded-2xl border transition-all ${containerStyles[variant]}`}
-    >
+    <div className={`p-6 rounded-2xl border transition-all ${style.container}`}>
       <p
-        className={`text-[10px] uppercase font-black mb-2 tracking-widest ${labelStyles[variant]}`}
+        className={`text-[10px] uppercase font-black mb-2 tracking-widest ${style.label}`}
       >
         {label}
       </p>
