@@ -69,8 +69,17 @@ export default function App() {
         )}
       </main>
 
-      <footer className="max-w-4xl mx-auto text-center mt-20 text-gray-700 text-[10px] font-bold tracking-[0.3em] uppercase">
-        WebAssembly & Worker Powered • 2026
+      <footer className="max-w-4xl mx-auto mt-20">
+        <div className="flex items-center justify-center gap-0.5 text-gray-600 text-[10px] font-bold tracking-[0.3em] uppercase">
+          <img
+            src={`${import.meta.env.BASE_URL}byte-beauty.png`}
+            width={70}
+            alt="Byte Beauty"
+            className="opacity-80"
+          />
+
+          <p>• WebAssembly & Worker Powered • 2026</p>
+        </div>
       </footer>
     </div>
   );
