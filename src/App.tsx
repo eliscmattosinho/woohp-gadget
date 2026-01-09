@@ -78,7 +78,7 @@ export default function App() {
             className="opacity-80"
           />
 
-          <p>• WebAssembly & Worker Powered • 2026</p>
+          <p>• Multi-Threaded & Worker Powered • 2026</p>
         </div>
       </footer>
     </div>
