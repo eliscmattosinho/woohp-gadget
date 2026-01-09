@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import imageCompression from "browser-image-compression";
 import {
   validateImage,
@@ -15,26 +15,54 @@ export function useImageCompressor() {
 
   const lastProgressValue = useRef<number>(0);
 
-  const revokeUrls = useCallback(() => {
-    if (previews.before) URL.revokeObjectURL(previews.before);
-    if (previews.after) URL.revokeObjectURL(previews.after);
-  }, [previews]);
+  // limpar URLs da memória do navegador
+  const purgePreviews = useCallback(() => {
+    setPreviews((prev) => {
+      if (prev.before) URL.revokeObjectURL(prev.before);
+      if (prev.after) URL.revokeObjectURL(prev.after);
+      return { before: "", after: "" };
+    });
+  }, []);
+
+  // Limpeza automática ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      setPreviews((current) => {
+        if (current.before) URL.revokeObjectURL(current.before);
+        if (current.after) URL.revokeObjectURL(current.after);
+        return current;
+      });
+    };
+  }, []);
 
   const compress = async (file: File) => {
     const error = validateImage(file);
     if (error) return alert(error);
 
-    revokeUrls();
-    setOriginalImage(file);
-    setCompressedImage(null);
-    setPreviews({ before: "", after: "" });
+    purgePreviews();
+
     setLoading(true);
     setProgress(0);
     lastProgressValue.current = 0;
+    setOriginalImage(file);
+    setCompressedImage(null);
+
+    const beforeUrl = URL.createObjectURL(file);
+    setPreviews({ before: beforeUrl, after: "" });
+
+    // TRATATIVA DE NITIDEZ (PRÉ-PROCESSAMENTO)
+    // Se a imagem for menor que 500KB e não for PNG, bye
+    // evitar efeito "pixelado/soft" em imagens já otimizadas
+    if (file.size < 500 * 1024 && file.type !== "image/png") {
+      setCompressedImage(file);
+      setPreviews({ before: beforeUrl, after: beforeUrl });
+      setLoading(false);
+      return;
+    }
 
     const options = getCompressionOptions(file, (p) => {
       const currentP = Math.round(p);
-      // SÓ atualiza o estado se mudar 5% ou chegar em 100%
+      // SÓ atualiza o estado se +5% ou chegar em 100%
       if (currentP - lastProgressValue.current >= 5 || currentP === 100) {
         setProgress(currentP);
         lastProgressValue.current = currentP;
@@ -44,8 +72,9 @@ export function useImageCompressor() {
     try {
       const compressedBlob = await imageCompression(file, options);
 
-      // Inteligência de tamanho
-      const finalBlob = compressedBlob.size > file.size ? file : compressedBlob;
+      // Inteligência de tamanho: se o blob comprimido for maior, aborta compressão
+      const isActuallySmaller = compressedBlob.size < file.size;
+      const finalBlob = isActuallySmaller ? compressedBlob : file;
 
       const compressedFile = new File(
         [finalBlob],
@@ -53,7 +82,6 @@ export function useImageCompressor() {
         { type: file.type, lastModified: Date.now() }
       );
 
-      const beforeUrl = URL.createObjectURL(file);
       const afterUrl = URL.createObjectURL(compressedFile);
 
       setPreviews({ before: beforeUrl, after: afterUrl });
@@ -64,6 +92,8 @@ export function useImageCompressor() {
     } catch (err) {
       console.error("Erro na compressão:", err);
       setLoading(false);
+      setCompressedImage(file);
+      setPreviews({ before: beforeUrl, after: beforeUrl });
     }
   };
 
@@ -72,18 +102,25 @@ export function useImageCompressor() {
 
     const link = document.createElement("a");
     link.href = previews.after;
-    link.download = `optimized_${compressedImage.name}`;
+
+    // Evitar name repeat
+    const finalName = compressedImage.name.startsWith("optimized_")
+      ? compressedImage.name
+      : `optimized_${compressedImage.name}`;
+
+    link.download = finalName;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   }, [compressedImage, previews.after]);
 
   const reset = useCallback(() => {
-    revokeUrls();
+    purgePreviews();
     setOriginalImage(null);
     setCompressedImage(null);
-    setPreviews({ before: "", after: "" });
     setLoading(false);
     setProgress(0);
-  }, [revokeUrls]);
+  }, [purgePreviews]);
 
   return {
     loading,

@@ -38,12 +38,18 @@ export const calculateEconomy = (
 export const getCompressionOptions = (
     file: File,
     onProgress: (p: number) => void
-): Options => ({
-    maxSizeMB: 0.8,
-    maxWidthOrHeight: 1980,
-    useWebWorker: true,
-    fileType: file.type as string,
-    initialQuality: 0.75,
-    preserveExif: false,
-    onProgress,
-});
+): Options => {
+    // Se for PNG, maior o limite de tamanho, PNGs sofrem mais com compressão agressiva
+    const isPng = file.type === "image/png";
+
+    return {
+        maxSizeMB: isPng ? 2 : 1.2,
+        maxWidthOrHeight: 2560,
+        useWebWorker: true,
+        fileType: file.type,
+        initialQuality: 0.85, // Sweet spot de compressão
+        preserveExif: true,
+        alwaysKeepResolution: true,
+        onProgress,
+    };
+};

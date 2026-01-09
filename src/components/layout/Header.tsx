@@ -6,11 +6,12 @@ export function Header() {
       <h1 className="text-6xl font-black tracking-tighter mb-4 text-white">
         Byte<span className="text-pink-600">Beauty</span>
       </h1>
-      <p className="text-gray-500 text-lg max-w-md mx-auto leading-relaxed">
-        Processamento 100% local e privado.
+      <p className="text-gray-500 text-sm max-w-md mx-auto mt-5 leading-relaxed">
+        Foco na fidelidade visual (nitidez).
       </p>
       <div className="flex justify-center gap-4 mt-6">
-        <Badge label="✨ WebAssembly Power" />
+        <Badge label="✨ Web Workers" />
+        <Badge label="💎 Lossless Quality" />
         <Badge label="🔒 Client-Side Only" />
       </div>
     </header>
